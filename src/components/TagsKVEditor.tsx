@@ -1,5 +1,6 @@
 import React from 'react';
-import { Button, IconButton, Input, Stack } from '@grafana/ui';
+import { Button, IconButton, Input } from '@grafana/ui';
+import { Stack } from './CompatStack';
 import { TagPair } from '../types';
 
 interface Props {

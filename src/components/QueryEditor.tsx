@@ -5,13 +5,13 @@ import {
   InlineField,
   MultiSelect,
   Select,
-  Stack,
 } from '@grafana/ui';
 
 import { DataSource } from '../datasource';
 import { MyDataSourceOptions, MyQuery, TagPair } from '../types';
 import { MAX_RESOURCE_SELECTIONS } from '../config/enums';
 import { TagsKVEditor } from './TagsKVEditor';
+import { Stack } from './CompatStack';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 type Option = { text: string; value: string; globalService?: number };
@@ -47,11 +47,14 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
   const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
   const [aggregationOptions, setAggregationOptions] = useState<Array<SelectableValue<string>>>([]);
 
+  // 用户修改字段后再触发查询（Grafana 推荐模式）。不要在 useEffect 里自动 onRunQuery：
+  // 挂载时会与 Explore 自身的首次查询并发，Grafana 13.3 Explore 的 Run query 按钮会一直转圈。
   const onKeyChange = useCallback(
     (key: keyof MyQuery, value: any) => {
       onChange({ ...query, [key]: value });
+      onRunQuery();
     },
-    [query, onChange]
+    [query, onChange, onRunQuery]
   );
 
   // 当前选中产品是否为全局产品（GlobalService === 1 → 隐藏地域）
@@ -59,14 +62,6 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
     () => productOptions.find((p) => p.value === productKey)?.globalService === 1,
     [productOptions, productKey]
   );
-
-  // 任意必填字段变化都触发查询；后端会在缺字段时返回 Notice 警告，让 Panel 显示
-  const resourceKey = resourceIds.join(',');
-  const tagsKey = JSON.stringify(tags);
-  useEffect(() => {
-    onRunQuery();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, productKey, region, metric, resourceKey, tagsKey, calcMethod, isGlobalProduct]);
 
   // 初次加载：项目、产品、聚合方式
   useEffect(() => {
@@ -189,6 +184,7 @@ export function QueryEditor({ query, onChange, onRunQuery, datasource }: Props) 
               metric: undefined,
               resourceIds: [],
             });
+            onRunQuery();
           }}
           isSearchable
         />

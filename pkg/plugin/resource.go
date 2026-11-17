@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
@@ -30,6 +31,8 @@ func (d *Datasource) CallResource(_ context.Context, req *backend.CallResourceRe
 		// 某些 Grafana 版本 req.Path 为空，需要自己从 URL 截取
 		path = splitPath(req.URL)
 	}
+	// Grafana 传入的 req.Path 不带前导斜杠（如 "projects"），统一补齐后再路由
+	path = normalizeResourcePath(path)
 
 	var (
 		options []Option
@@ -407,6 +410,11 @@ func parseQuery(raw string) url.Values {
 		return u.Query()
 	}
 	return url.Values{}
+}
+
+// normalizeResourcePath 把 "projects"、"/projects"、"projects/" 统一为 "/projects"
+func normalizeResourcePath(p string) string {
+	return "/" + strings.Trim(p, "/")
 }
 
 func splitPath(raw string) string {
